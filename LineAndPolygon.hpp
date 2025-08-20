@@ -8,56 +8,64 @@
 // https://en.wikipedia.org/wiki/Intersection_(geometry)#Two_line_segments
 // https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
 
+std::array<double, 2> operator-(
+    const std::array<double, 2>& a,
+    const std::array<double, 2>& b
+) noexcept {
+    return { a[0] - b[0], a[1] - b[1] };
+}
+
+double operator^(
+    const std::array<double, 2>& a,
+    const std::array<double, 2>& b
+) noexcept {
+    return a[0] * b[1] - a[1] * b[0];
+}
+
 bool LineAndPolygon(
-    std::array<std::array<double, 2>> line,
+    const std::array<std::array<double, 2>, 2>& line,
     const std::vector<std::array<double, 2>>& polygon
 ) noexcept {
     bool before = false, after = false;
 
-    // Line: [ [ x1, y1 ], [ x2, y2 ] ]
-    // Edge: [ [ x3, y3 ], [ x4, y4 ] ]
+    // Vector in the line direction
+    const auto lv = line[1] - line[0];
 
-    double
-        x1, x2, x3, x4,
-        y1, y2, y3, y4;
-    std::tie(std::tie(x1, y1), std::tie(x2, y2)) = line;
+    double d, l, e;
+    auto ev = polygon.back();
+    for (const auto& e2 : polygon) {
+        // https://stackoverflow.com/a/565282/2640636
+        const auto dv = ev - line[0];
+        ev = e2 - ev; // vector in the edge direction
 
-    const double
-        x12 = x1 - x2,
-        y12 = y1 - y2;
-
-    std::tie(x3, y3) = polygon.back();
-    for (const auto& p : polygon) {
-        std::tie(x4, y4) = p;
-
-        const double
-            x13 = x1 - x3,
-            y13 = y1 - y3,
-            x34 = x3 - x4,
-            y34 = y3 - y4;
+        d = lv ^ ev;
+        // Line and edge are parallel
+        if (d == 0) {
+            goto next;
+        }
 
         // TODO: https://stackoverflow.com/a/52732707/2640636
 
-        const double d = x12 * y34 - y12 * x34;
-        const double e = x13 * y12 - y13 * x12;
-        if (d > 0 ? (e < 0 || d < e) : (e > 0 || d > e))
+        e = ev ^ dv;
+        // Intersection is outside the edge: e/d not in [0, 1]
+        if (d < 0 ? (e < d || 0 < e) : (e < 0 || d < e)) {
             goto next;
-
-        const double l = x13 * y34 - y13 * x34;
-        if (d > 0 ? l < 0 : l > 0) {
+        }
+        l = dv ^ lv;
+        // Intersection is before the line: l/d < 0
+        if (d < 0 ? 0 < l : l < 0) {
             before = !before;
             goto next;
         }
-        if (d > 0 ? d < l : d > l) {
+        // Intersection is after the line: l/d > 1
+        if (d < 0 ? l < d : d < l) {
             after = !after;
             goto next;
         }
-
+        // Line and edge segments intersect
         return true;
-
 next:
-        x3 = x4;
-        y3 = y4;
+        ev = e2;
     }
 
     return before && after;
@@ -65,4 +73,3 @@ next:
 
 // TODO: going into polygon through a vertex: double counting intersection
 // TODO: zero line length
-// TODO: d = 0
