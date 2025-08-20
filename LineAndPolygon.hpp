@@ -34,6 +34,10 @@ bool LineAndPolygonOverlap(
 
     // Vector in the line direction
     const auto lv = line[1] - line[0];
+    // TODO: zero line length
+
+    // Previous iteration had a far edge intersection
+    bool throughVertex = false;
 
     double t;
     auto ev = polygon.back();
@@ -48,12 +52,24 @@ bool LineAndPolygonOverlap(
             goto next;
         }
 
-        // TODO: https://stackoverflow.com/a/52732707/2640636
-
         t = ev ^ dv;
         // Intersection is outside the edge: t/d not in [0, 1]
         if (d < 0 ? (t < d || 0 < t) : (t < 0 || d < t)) {
             goto next;
+        }
+        // https://stackoverflow.com/a/52732707/2640636
+        // TODO: approximate comparison
+        if (throughVertex || t == 0) {
+            // TODO: Handle on this iteration
+            throughVertex = false;
+        } else if (t == d) {
+            if (&e2 == &polygon.back()) {
+                // This is the last vertex
+                // TODO: Handle on this iteration
+            } else {
+                // Handle on the next iteration
+                throughVertex = true;
+            }
         }
 
         t = dv ^ lv;
@@ -76,6 +92,3 @@ next:
 
     return before && after;
 }
-
-// TODO: going into polygon through a vertex: double counting intersection
-// TODO: zero line length
